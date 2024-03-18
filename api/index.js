@@ -12,11 +12,11 @@ const socketIO = require('socket.io');
 
 const app = express();
 // const port = 4000;
-const port = process.env.PORT || 4000;
+const port = 4000;
 const cors = require('cors');
 app.use(cors());
 
-app.use(bodyParser.urlencoded({extended: false}));
+app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(passport.initialize());
 const jwt = require('jsonwebtoken');
@@ -33,14 +33,14 @@ const CombinedCase = require("./models/CombinedCases"); // Import CombinedCase m
 const ComparingCase = require("./models/ComparingCases")
 const RapeCase = require("./models/RapeCases")
 const LiteracyRate = require("./models/LiteracyRate")
-const FemaleJudges= require("./models/PerFemaleJudges")
+const FemaleJudges = require("./models/PerFemaleJudges")
 
 // Creating a http server instance
 const server = http.createServer(app);
 
 // Connecting socket.io to the server
 const io = socketIO(server, {
-  pingTimeout:60000,
+  pingTimeout: 60000,
   cors: {
     origin: 'http://10.0.2.2:4000/', // Adjust this origin to match your client's URL
   },
@@ -71,16 +71,16 @@ server.listen(port, () => {
 });
 
 
-io.on('connection', (socket)=>{
+io.on('connection', (socket) => {
   console.log("connected to socket.io");
 
-  socket.on("setup", (userId)=>{
+  socket.on("setup", (userId) => {
     socket.join(userId);
     console.log(userId);
     socket.emit("connected");
   });
 
-  socket.on("join chat", (room)=>{
+  socket.on("join chat", (room) => {
     socket.join(room);
     console.log("user joined room", room);
   });
@@ -101,7 +101,7 @@ io.on('connection', (socket)=>{
         content: postData.content,
         senderId: postData.senderId,
         url: postData.url,
-        image:postData.image,
+        image: postData.image,
         userId: postData.userId,
         user: user //
       });
@@ -133,16 +133,16 @@ io.on('connection', (socket)=>{
   });
 
 
-  socket.on("typing", (room)=> socket.in(room).emit("typing"));
-  socket.on("stop typing", (room)=> socket.in(room).emit("stop typing"));
+  socket.on("typing", (room) => socket.in(room).emit("typing"));
+  socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
 
-  socket.on("new message", (newMessageReceived)=>{
+  socket.on("new message", (newMessageReceived) => {
     var chat = newMessageReceived.chat;
 
     if (!chat.users) return console.log("chat.users not defined");
 
-    chat.users.forEach(user =>{
-      if(user._id === newMessageReceived.sender._id) return;
+    chat.users.forEach(user => {
+      if (user._id === newMessageReceived.sender._id) return;
 
       socket.in(user._id).emit("message received", newMessageReceived);
     })
@@ -317,14 +317,14 @@ app.get('/users/:userId', async (req, res) => {
 //endpoint to register a user
 app.post('/register-user', async (req, res) => {
   try {
-    const {name, email, password, image} = req.body;
+    const { name, email, password, image } = req.body;
 
-    const existingUser = await User.findOne({email});
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({message: 'email already registered'});
+      return res.status(400).json({ message: 'email already registered' });
     }
     //create a new user
-    const newUser = new User({name, email, password, image});
+    const newUser = new User({ name, email, password, image });
 
     //generate and store the verification token
     newUser.verificationToken = crypto.randomBytes(20).toString('hex');
@@ -335,15 +335,14 @@ app.post('/register-user', async (req, res) => {
     //send the verification email to the user
     sendVerificationEmail(newUser.email, newUser.verificationToken);
 
-    res.status(200).json({message: 'Registration successful'});
+    res.status(200).json({ message: 'Registration successful' });
   } catch (error) {
     console.log('Error registering user', error);
-    res.status(500).json({message: 'error registering user'});
+    res.status(500).json({ message: 'error registering user' });
   }
 });
 
-const sendVerificationEmail = async (email, verificationToken) => 
-{
+const sendVerificationEmail = async (email, verificationToken) => {
   //create a nodemailer transporter
 
   const transporter = nodemailer.createTransport({
@@ -373,19 +372,19 @@ app.get('/verify/:token', async (req, res) => {
   try {
     const token = req.params.token;
 
-    const user = await User.findOne({verificationToken: token});
+    const user = await User.findOne({ verificationToken: token });
     if (!user) {
-      return res.status(404).json({message: 'Invalid token'});
+      return res.status(404).json({ message: 'Invalid token' });
     }
 
     user.verified = true;
     user.verificationToken = undefined;
     await user.save();
 
-    res.status(200).json({message: 'Email Verified Successfully'});
+    res.status(200).json({ message: 'Email Verified Successfully' });
   } catch (error) {
     console.log('error getting the token', error);
-    res.status(500).json({message: 'Email verification failed'});
+    res.status(500).json({ message: 'Email verification failed' });
   }
 });
 
@@ -403,36 +402,36 @@ const createToken = userId => {
     userId: userId,
   };
   //Generate a token with a secret key and expiration time
-  const token = jwt.sign(payload, 'Q$r2K6W8n!jCW%Zk', {expiresIn: '1h'});
+  const token = jwt.sign(payload, 'Q$r2K6W8n!jCW%Zk', { expiresIn: '1h' });
   return token;
 };
 
 //endpoint for login of that user
 app.post('/login', (req, res) => {
-  const {email, password} = req.body;
+  const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(404).json({message: 'Email and passwords are required'});
+    return res.status(404).json({ message: 'Email and passwords are required' });
   }
   //check for the user in the database
-  User.findOne({email})
+  User.findOne({ email })
     .then(user => {
       if (!user) {
         //user not found
-        return res.status(404).json({message: 'User not found'});
+        return res.status(404).json({ message: 'User not found' });
       }
 
       //comapre the provided password with the database's password
       if (user.password !== password) {
-        return res.status(404).json({message: 'Invalid password'});
+        return res.status(404).json({ message: 'Invalid password' });
       }
 
       const token = createToken(user._id);
-      res.status(200).json({token, userId: user._id});
+      res.status(200).json({ token, userId: user._id });
     })
     .catch(error => {
       console.log('ERROR IN FINDING THE USER', error);
-      res.status(500).json({message: 'Internal server error!'});
+      res.status(500).json({ message: 'Internal server error!' });
     });
 });
 
@@ -450,9 +449,9 @@ app.post('/lawyer-profile', async (req, res) => {
       contact,
     } = req.body;
 
-    const existingLawyer = await User.findOne({email});
+    const existingLawyer = await User.findOne({ email });
     if (existingLawyer) {
-      return res.status(400).json({message: 'lawyer already registered'});
+      return res.status(400).json({ message: 'lawyer already registered' });
     }
     //create a new user
     const newLawyer = new User({
@@ -476,44 +475,44 @@ app.post('/lawyer-profile', async (req, res) => {
     //send the verification email to the user
     sendVerificationEmail(newLawyer.email, newLawyer.verificationToken);
 
-    res.status(200).json({message: 'Registration successful'});
+    res.status(200).json({ message: 'Registration successful' });
   } catch (error) {
     console.log('Error registering Lawyer', error);
-    res.status(500).json({message: 'error registering Lawyer'});
+    res.status(500).json({ message: 'error registering Lawyer' });
   }
 });
 
 //endpoint to get all the lawyers
 app.get('/all-lawyers', async (req, res) => {
   try {
-    const lawyers = await User.find({isLawyer: true});
+    const lawyers = await User.find({ isLawyer: true });
     res.json(lawyers);
   } catch (err) {
     console.error(err);
-    res.status(500).json({message: 'Internal Server Error'});
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 });
 
 //endpoint to get Single Lawyer Information
 app.get('/SingleLawyer/:lawyerId', async (req, res) => {
-  const {lawyerId} = req.params;
+  const { lawyerId } = req.params;
   try {
     const SingleLawyer = await User.findById(lawyerId);
     res.json(SingleLawyer);
   } catch (err) {
     console.error(err);
-    res.status(500).json({message: 'Internal server Error'});
+    res.status(500).json({ message: 'Internal server Error' });
   }
 });
 
 //endpoint to update the rating for a lawyer profile
 app.put('/lawyer/:id/rating', async (req, res) => {
   const lawyerId = req.params.id;
-  let {rating} = req.body;
+  let { rating } = req.body;
   try {
     const lawyer = await User.findById(lawyerId);
     if (!lawyer) {
-      return res.status(404).json({message: 'Lawyer not found'});
+      return res.status(404).json({ message: 'Lawyer not found' });
     }
     lawyer.ratings.push(rating);
     const totalRatings = lawyer.ratings.reduce((acc, curr) => acc + curr, 0);
@@ -526,17 +525,17 @@ app.put('/lawyer/:id/rating', async (req, res) => {
     lawyer.averageRating = parseFloat(lawyer.averageRating.toFixed(1));
 
     await lawyer.save();
-    res.status(200).json({message: 'Rating updated successfully'});
+    res.status(200).json({ message: 'Rating updated successfully' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({message: 'Internal server error'});
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
 //endpoint to get the Lawyer details to design the chat Room header
 app.get('/chat/:lawyerId', async (req, res) => {
   try {
-    const {lawyerId} = req.params;
+    const { lawyerId } = req.params;
 
     //fetch the user data from the user Id
     const receipentId = await LawyerProfile.findById(lawyerId);
@@ -544,47 +543,47 @@ app.get('/chat/:lawyerId', async (req, res) => {
     res.json(receipentId);
   } catch (error) {
     console.log(error);
-    res.status(500).json({error: 'Internal server Error'});
+    res.status(500).json({ error: 'Internal server Error' });
   }
 });
 
 // GET route to fetch all messages for a given chat
 app.get('/chat/:userId/:lawyerId', async (req, res) => {
-    const { userId, lawyerId } = req.params;
-  
-    try {
-      // Find all messages where the sender_id or receiver_id matches either userId or lawyerId
-      const messages = await Chat.find({
-        $or: [
-          { sender_id: userId, receiver_id: lawyerId },
-          { sender_id: lawyerId, receiver_id: userId }
-        ]
-      });
-  
-      res.json({ messages });
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
+  const { userId, lawyerId } = req.params;
+
+  try {
+    // Find all messages where the sender_id or receiver_id matches either userId or lawyerId
+    const messages = await Chat.find({
+      $or: [
+        { sender_id: userId, receiver_id: lawyerId },
+        { sender_id: lawyerId, receiver_id: userId }
+      ]
+    });
+
+    res.json({ messages });
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 
-  ///New apis that i am writing 
-  app.get('/search-users/', async(req, res)=>{
-    const {query} = req.query;
-    try{
-      const users = await User.find({name: {$regex: query, $options: 'i'}});
-      res.json(users);
-    } catch (error){
-      console.error('Error searching the users', error);
-      res.status(500).json({error: 'Internal server error'});
-    }
-  });
+///New apis that i am writing 
+app.get('/search-users/', async (req, res) => {
+  const { query } = req.query;
+  try {
+    const users = await User.find({ name: { $regex: query, $options: 'i' } });
+    res.json(users);
+  } catch (error) {
+    console.error('Error searching the users', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 //for creating one-one chat
-app.post('/access-chats',async(req, res)=>{
-  const {userId, itemId} = req.body;
+app.post('/access-chats', async (req, res) => {
+  const { userId, itemId } = req.body;
 
-  if(!userId){
+  if (!userId) {
     console.log("UserId params not sent with request");
     return res.sendStatus(400);
   }
@@ -592,8 +591,8 @@ app.post('/access-chats',async(req, res)=>{
   var isChat = await ChatModel.find({
     isGroupChat: false,
     $and: [
-      { users: {$elemMatch: {$eq: itemId}}},
-      { users: {$elemMatch: {$eq: userId}}},
+      { users: { $elemMatch: { $eq: itemId } } },
+      { users: { $elemMatch: { $eq: userId } } },
     ],
   }).populate("users", "-password").populate("latestMessage");
 
@@ -602,7 +601,7 @@ app.post('/access-chats',async(req, res)=>{
     select: "name image email",
   });
 
-  if (isChat.length>0){
+  if (isChat.length > 0) {
     res.send(isChat[0]);
   } else {
     var chatData = {
@@ -610,13 +609,13 @@ app.post('/access-chats',async(req, res)=>{
       isGroupChat: false,
       users: [itemId, userId],
     };
-    try{
+    try {
       const createdChat = await ChatModel.create(chatData);
-      const FullChat = await ChatModel.findOne({_id: createdChat._id}).populate(
+      const FullChat = await ChatModel.findOne({ _id: createdChat._id }).populate(
         "users", "-password"
       );
       res.status(200).send(FullChat);
-    } catch(error){
+    } catch (error) {
       res.status(400);
       throw new Error(error.message);
     }
@@ -624,22 +623,22 @@ app.post('/access-chats',async(req, res)=>{
 
 })
 //for fetching chatss
-app.get('/fetch-chats', async(req, res)=>{
-  const {userId} = req.query;
-  try{
-    ChatModel.find({users:{$elemMatch:{$eq:userId}}})
-    .populate("users", "-password")
-    .populate("groupAdmin", "-password")
-    .populate("latestMessage")
-    .sort({updatedAt: -1})
-    .then(async(results)=>  {
-      results = await User.populate(results, {
-        path: "latestMessage.sender",
-        select: "name image email",
-      });
-      res.status(200).send(results);
-    })
-  }catch(err){
+app.get('/fetch-chats', async (req, res) => {
+  const { userId } = req.query;
+  try {
+    ChatModel.find({ users: { $elemMatch: { $eq: userId } } })
+      .populate("users", "-password")
+      .populate("groupAdmin", "-password")
+      .populate("latestMessage")
+      .sort({ updatedAt: -1 })
+      .then(async (results) => {
+        results = await User.populate(results, {
+          path: "latestMessage.sender",
+          select: "name image email",
+        });
+        res.status(200).send(results);
+      })
+  } catch (err) {
     res.status(400);
     throw new Error(err.message);
   }
@@ -688,32 +687,32 @@ app.post('/create-groupchat', async (req, res) => {
 
 
 //for renaming the group
-app.put('/rename-groupchat', async(req, res)=>{
-  const {chatId, chatName} = req.body;
+app.put('/rename-groupchat', async (req, res) => {
+  const { chatId, chatName } = req.body;
 
   const updatedChat = await ChatModel.findByIdAndUpdate(
     chatId,
     {
       chatName,
     }, {
-      new: true,
-    }
+    new: true,
+  }
   ).populate("users", "-password").populate("groupAdmin", "-password");
-  if (!updatedChat){
+  if (!updatedChat) {
     res.status(404);
     throw new Error("Chat not found");
-  } else{
+  } else {
     res.json(updatedChat);
   }
 });
 
 //for add to group
-app.put('/add-to-group', async(req,res)=>{
-  const {chatId, userId} = req.body;
+app.put('/add-to-group', async (req, res) => {
+  const { chatId, userId } = req.body;
   const added = await ChatModel.findByIdAndUpdate(chatId, {
-    $push: {users: userId},
-    
-  }, {new: true}
+    $push: { users: userId },
+
+  }, { new: true }
   ).populate("users", "-password").populate("groupAdmin", "-password");
 
   if (!added) {
@@ -725,12 +724,12 @@ app.put('/add-to-group', async(req,res)=>{
 });
 
 //for removing from group
-app.put('/remove-from-group', async(req,res)=>{
-  const {chatId, userId} = req.body;
+app.put('/remove-from-group', async (req, res) => {
+  const { chatId, userId } = req.body;
   const removed = await ChatModel.findByIdAndUpdate(chatId, {
-    $pull: {users: userId},
-    
-  }, {new: true}
+    $pull: { users: userId },
+
+  }, { new: true }
   ).populate("users", "-password").populate("groupAdmin", "-password");
 
   if (!removed) {
@@ -743,9 +742,9 @@ app.put('/remove-from-group', async(req,res)=>{
 
 
 //post request for sending messages
-app.post('/send-message', async(req, res)=>{
-  const {content, chatId, senderId} = req.body;
-  
+app.post('/send-message', async (req, res) => {
+  const { content, chatId, senderId } = req.body;
+
   if (!content || !chatId) {
     console.log("Invalid data passed into request");
     return res.sendStatus(400);
@@ -756,7 +755,7 @@ app.post('/send-message', async(req, res)=>{
     content: content,
     chat: chatId,
   };
-  try{
+  try {
     var message = await Message.create(newMessage);
     message = await message.populate("sender", "name image");
     message = await message.populate("chat");
@@ -769,7 +768,7 @@ app.post('/send-message', async(req, res)=>{
     });
 
     res.json(message);
-  } catch(error){
+  } catch (error) {
     res.status(400);
     throw new Error(error.message);
   }
@@ -777,21 +776,21 @@ app.post('/send-message', async(req, res)=>{
 
 
 //api to get all messages for a certain chat
-app.get('/get-all-messages/:chatId', async(req, res)=>{
-  try{
-    const messages = await Message.find({chat: req.params.chatId}).populate("sender", "name image email").populate("chat");
+app.get('/get-all-messages/:chatId', async (req, res) => {
+  try {
+    const messages = await Message.find({ chat: req.params.chatId }).populate("sender", "name image email").populate("chat");
     res.json(messages);
-  } catch(error){
+  } catch (error) {
     res.status(400);
     throw new Error(error.message);
   }
-}) 
+})
 
 
 //endpoint to get the Lawyer details to design the chat Room header
 app.get('/chat-for-user/:itemId', async (req, res) => {
   try {
-    const {itemId} = req.params;
+    const { itemId } = req.params;
 
     //fetch the user data from the user Id
     const receipentId = await User.findById(itemId);
@@ -799,44 +798,44 @@ app.get('/chat-for-user/:itemId', async (req, res) => {
     res.json(receipentId);
   } catch (error) {
     console.log(error);
-    res.status(500).json({error: 'Internal server Error'});
+    res.status(500).json({ error: 'Internal server Error' });
   }
 });
 
 
 //endpoint for fetching a specific chat
-app.get('/specific-chat/:itemId', async (req, res)=>{
-  try{
-    const {itemId} = req.params;
+app.get('/specific-chat/:itemId', async (req, res) => {
+  try {
+    const { itemId } = req.params;
 
     //fetch the chat data from the chatId
     const receipentChat = await ChatModel.findById(itemId);
     res.json(receipentChat);
-  }catch(error){
+  } catch (error) {
     console.log(error);
-    req.status(500).json({error: 'Internal server error'});
+    req.status(500).json({ error: 'Internal server error' });
   }
 });
 
 //endpoint to fetch all group chats
-app.get('/fetch-all-group-chats', async(req, res)=>{
-  try{
-    ChatModel.find({isGroupChat: true})
-    .populate("users", "-password")
-    .populate("groupAdmin", "-password")
-    .populate("latestMessage")
-    .sort({updatedAt: -1})
-    .then(async(results)=>  {
-      results = await User.populate(results, {
-        path: "latestMessage.sender",
-        select: "name image email",
-      });
-      res.status(200).send(results);
-    })
-    
-  }catch(error){
+app.get('/fetch-all-group-chats', async (req, res) => {
+  try {
+    ChatModel.find({ isGroupChat: true })
+      .populate("users", "-password")
+      .populate("groupAdmin", "-password")
+      .populate("latestMessage")
+      .sort({ updatedAt: -1 })
+      .then(async (results) => {
+        results = await User.populate(results, {
+          path: "latestMessage.sender",
+          select: "name image email",
+        });
+        res.status(200).send(results);
+      })
+
+  } catch (error) {
     console.log(error);
-    req.status(500).json({error: 'Internal server error'});
+    req.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -857,10 +856,10 @@ app.get("/api/trending-cases", async (req, res) => {
 // Define routes for CombinedCases
 app.get("/api/combined-cases", async (req, res) => {
   try {
-      const combinedCases = await CombinedCase.find();
-      res.json(combinedCases);
+    const combinedCases = await CombinedCase.find();
+    res.json(combinedCases);
   } catch (error) {
-      res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -868,39 +867,39 @@ app.get("/api/combined-cases", async (req, res) => {
 // Define routes for ComparingCases
 app.get("/api/comparing-cases", async (req, res) => {
   try {
-      const comparingCases = await ComparingCase.find();
-      res.json(comparingCases);
+    const comparingCases = await ComparingCase.find();
+    res.json(comparingCases);
   } catch (error) {
-      res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message });
   }
 });
 
 // Define routes for RapeCases
 app.get("/api/rape-cases", async (req, res) => {
   try {
-      const rapeCases = await RapeCase.find();
-      res.json(rapeCases);
+    const rapeCases = await RapeCase.find();
+    res.json(rapeCases);
   } catch (error) {
-      res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message });
   }
 });
 
 // Define routes for LiteracyRate
 app.get("/api/literacy-rate", async (req, res) => {
   try {
-      const literacyRate = await LiteracyRate.find();
-      res.json(literacyRate);
+    const literacyRate = await LiteracyRate.find();
+    res.json(literacyRate);
   } catch (error) {
-      res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message });
   }
 });
 
 // Define routes for PerFemaleJudges
 app.get("/api/female-judges", async (req, res) => {
   try {
-      const femaleJudges = await FemaleJudges.find();
-      res.json(femaleJudges);
+    const femaleJudges = await FemaleJudges.find();
+    res.json(femaleJudges);
   } catch (error) {
-      res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message });
   }
 });
