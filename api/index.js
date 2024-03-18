@@ -60,6 +60,11 @@ mongoose
     console.log('error connecting to mongodb', error);
   });
 
+// Add a route to handle requests to the root URL
+app.get("/", (req, res) => {
+  res.send("Server is running");
+});
+
 server.listen(port, () => {
   console.log('Server running on port 4000');
 });
